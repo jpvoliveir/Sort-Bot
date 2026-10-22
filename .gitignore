@@ -1,0 +1,15 @@
+# Ambiente virtual (recriar com: py -3.12 -m venv .venv)
+.venv/
+venv/
+.env
+
+# Cache do Python
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Saídas geradas pelo robô (regeneradas a cada execução)
+data/outputs/
+
+# Arquivos temporários do Excel / Power BI
+~$*

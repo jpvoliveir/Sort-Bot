@@ -1,21 +1,23 @@
+from pathlib import Path
+
 import pandas as pd
 
-def exportar_jogos(jogos, nome_arquivo="data/outputs/jogos_rankeados.xlsx"):
+from analysis.dados import RAIZ
+
+CAMINHO_PADRAO = RAIZ / "data" / "outputs" / "jogos_gerados.xlsx"
+
+
+def exportar_jogos(jogos, origem, nome_arquivo=CAMINHO_PADRAO):
     if not jogos:
         print("Nenhum jogo para exportar.")
         return
 
-    df = pd.DataFrame(jogos)
+    df = pd.DataFrame({
+        "jogo": ["-".join(map(str, j)) for j in jogos],
+        "origem": origem,
+    })
 
-    # transforma a lista do jogo em texto
-    df["jogo"] = df["jogo"].apply(lambda x: "-".join(map(str, x)))
-
-    # ordena pelo score
-    df = df.sort_values(by="score", ascending=False)
-
-    # cria ranking
-    df.insert(0, "ranking", range(1, len(df) + 1))
-
+    Path(nome_arquivo).parent.mkdir(parents=True, exist_ok=True)
     df.to_excel(nome_arquivo, index=False)
 
     print(f"Arquivo exportado com sucesso: {nome_arquivo}")
