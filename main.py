@@ -1,29 +1,39 @@
-from generator.gerador import gerar_jogos_filtrados
+from analysis.backtest import melhor_significativa, rodar_laboratorio
+from analysis.dados import carregar_sorteios, matriz_bolas
+from analysis.estrategias import ESTRATEGIAS
 from generator.exportador import exportar_jogos
+from generator.gerador import gerar_jogos
 
-jogos = gerar_jogos_filtrados(
-    qtd_jogos=50,
-    score_min=0.75
+QTD_JOGOS = 3
+
+df = carregar_sorteios()
+bolas = matriz_bolas(df)
+print(f"Dados até o concurso {df['Concurso'].iloc[-1]} ({df['Data do Sorteio'].iloc[-1]})")
+
+# Só usa uma estratégia de previsão se ela passou no backtest
+melhor = melhor_significativa(rodar_laboratorio(bolas))
+if melhor:
+    ranking = ESTRATEGIAS[melhor.nome](bolas)
+    origem = melhor.nome
+    print(f"Estratégia aprovada no backtest: {melhor.nome} (p = {melhor.p_valor:.4f})")
+else:
+    ranking = None
+    origem = "aleatorio"
+    print("Nenhuma estratégia superou o acaso no backtest -> jogos aleatórios (rode backtest.py para detalhes)")
+
+jogos = gerar_jogos(
+    qtd_jogos=QTD_JOGOS,
+    ranking=ranking,
+    sorteios_anteriores={tuple(sorted(j)) for j in bolas},
 )
 
-# Ordenar jogos por score (maior para menor)
-jogos_ordenados = sorted(jogos, key=lambda x: x['score'], reverse=True)
-
 # Exibir no terminal
-print("="*60)
-print("JOGOS GERADOS PARA A MEGA-SENA")
-print("="*60)
-print(f"\nTotal de jogos: {len(jogos_ordenados)}\n")
-
-for idx, jogo_info in enumerate(jogos_ordenados, 1):
-    jogo_str = "-".join(map(str, jogo_info['jogo']))
-    score = jogo_info['score']
-    pares = jogo_info['pares']
-    fib = jogo_info['fibonacci']
-    quad = jogo_info['quadrantes']
-    print(f"{idx:2d}. {jogo_str:20s} | Score: {score:.3f} | Pares: {pares} | Fib: {fib} | Quad: {quad}")
-
-print("\n" + "="*60)
+print("=" * 60)
+print("JOGOS GERADOS PARA A MEGA-SENA (sem combinações populares)")
+print("=" * 60)
+for idx, jogo in enumerate(jogos, 1):
+    print(f"{idx:2d}. {'-'.join(f'{n:02d}' for n in jogo)}")
+print("=" * 60)
 
 # Exportar para arquivo
-exportar_jogos(jogos)
+exportar_jogos(jogos, origem)

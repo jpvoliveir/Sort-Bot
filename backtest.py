@@ -1,101 +1,55 @@
 """
-Backtest do robô da Mega-Sena
+Laboratório de previsão da Mega-Sena
 
-Este módulo testa o desempenho do gerador de jogos
-usando dados históricos reais.
+1. Backtest walk-forward: cada estratégia tenta prever cada concurso usando só o passado
+2. Teste de viés físico: as dezenas saem com frequências iguais?
+
+Resultados também são exportados para data/outputs/ (Power BI).
 """
+from datetime import datetime
 
 import pandas as pd
 
-from generator.score import calcular_score
-from generator.gerador import (
-    contar_pares,
-    contar_fibonacci,
-    contar_quadrantes,
-    distribuicao_faixas,
-    gerar_jogos_filtrados
-)
+from analysis.backtest import ACERTOS_NULO, MEDIA_NULA, rodar_laboratorio
+from analysis.dados import RAIZ, carregar_sorteios, matriz_bolas
+from analysis.vies import frequencia_por_periodo
 
-# ajuste o caminho se necessário
-df = pd.read_excel("data/raw/Mega-Sena.xlsx")
+df = carregar_sorteios()
+bolas = matriz_bolas(df)
 
-# Verificar se os dados estão atualizados
-from datetime import datetime
-# Converter data corretamente (pode estar como string)
-ultima_data_dt = pd.to_datetime(df["Data do Sorteio"], format="%d/%m/%Y", errors="coerce").max()
-hoje = datetime.now()
+ultima_data = pd.to_datetime(df["Data do Sorteio"].iloc[-1], format="%d/%m/%Y")
+dias_atrasado = (datetime.now() - ultima_data).days
+print(f"Último concurso: {df['Concurso'].iloc[-1]} ({ultima_data:%d/%m/%Y})")
+if dias_atrasado > 7:
+    print(f"[ATENCAO] Dados {dias_atrasado} dias atrasados. Rode: python tools/atualizar_dados.py")
 
-dias_atrasado = (hoje - ultima_data_dt).days if pd.notna(ultima_data_dt) else 999
-if dias_atrasado > 30:
-    print(f"[ATENCAO] Arquivo esta {dias_atrasado} dias atrasado!")
-    print(f"Ultima data: {ultima_data_dt.strftime('%d/%m/%Y') if pd.notna(ultima_data_dt) else 'N/A'}")
-    print("Considere atualizar data/raw/Mega-Sena.xlsx com dados mais recentes\n")
-elif dias_atrasado >= 0:
-    print(f"[OK] Arquivo atualizado. Ultima data: {ultima_data_dt.strftime('%d/%m/%Y') if pd.notna(ultima_data_dt) else 'N/A'}\n")
+print("\n" + "=" * 78)
+print("1. BACKTEST WALK-FORWARD")
+print("=" * 78)
+resultados = rodar_laboratorio(bolas)
+print(f"{'estratégia':20s} {'posição média':>13s} {'z':>6s} {'p-valor':>8s} {'acertos/jogo':>12s} {'quadras+':>9s}")
+print(f"{'(acaso)':20s} {MEDIA_NULA:13.2f} {0:6.2f} {'':>8s} {ACERTOS_NULO:12.3f}")
+for r in resultados:
+    marca = " <- SIGNIFICATIVA" if r.significativa else (" (controle)" if r.controle else "")
+    print(f"{r.nome:20s} {r.posicao_media:13.2f} {r.z:6.2f} {r.p_valor:8.4f} "
+          f"{r.acertos_top6:12.3f} {r.quadras_ou_mais:9d}{marca}")
+print(f"\nConcursos testados: {resultados[0].n_concursos}. Posição média menor que {MEDIA_NULA} = melhor que o acaso.")
+print("Significativa = p-valor abaixo de 0,05 / nº de estratégias (correção de Bonferroni).")
+if not any(r.significativa for r in resultados):
+    print("Veredito: nenhuma estratégia prevê melhor que o acaso.")
 
-
-def calcular_score_sorteio(row):
-    jogo = sorted([
-        row["Bola1"],
-        row["Bola2"],
-        row["Bola3"],
-        row["Bola4"],
-        row["Bola5"],
-        row["Bola6"]
-    ])
-
-    dados = {
-        "pares": contar_pares(jogo),
-        "fibonacci": contar_fibonacci(jogo),
-        "quadrantes": contar_quadrantes(jogo),
-        "faixas": distribuicao_faixas(jogo)
-    }
-
-    return calcular_score(dados)
-
-
-df["score"] = df.apply(calcular_score_sorteio, axis=1)
-
-jogos_gerados = gerar_jogos_filtrados(
-    qtd_jogos=500,
-    score_min=0.7
-)
-
-df_gerados = pd.DataFrame(jogos_gerados)
-
-print("REAIS")
-print(df["score"].describe())
-
-print("\nGERADOS")
-print(df_gerados["score"].describe())
-
-print("\n" + "="*60)
-print("INTERPRETACAO:")
-print("="*60)
-print("""
-[OK] Modelo saudavel:
-   - Medias proximas
-   - Quartis parecidos
-   - Gerados nao muito melhores que os reais
-
-[X] Modelo enviesado:
-   - Gerados so com score > 0.95
-   - Reais concentrados abaixo de 0.6
-   - Distribuicao muito diferente
-
-Regra de ouro:
-   O robo deve gerar jogos como se fossem sorteios reais comuns, nao "perfeitos".
-""")
+print("\n" + "=" * 78)
+print("2. TESTE DE VIÉS FÍSICO (qui-quadrado de frequência das 60 dezenas)")
+print("=" * 78)
+vies = frequencia_por_periodo(bolas, df["Concurso"].to_numpy())
+for v in vies:
+    alerta = "  <- frequências desiguais (p < 0,05)" if v["p_valor"] < 0.05 else ""
+    print(f"concursos {v['periodo']:>11s}  n={v['n_concursos']:5d}  chi2={v['chi2']:6.1f}  p={v['p_valor']:.3f}{alerta}")
+print("Com vários períodos testados, um p < 0,05 isolado é esperado por acaso (1 em 20).")
 
 # Exportar para visualização no Power BI
-from pathlib import Path
-
-output_dir = Path("data/outputs")
-output_dir.mkdir(parents=True, exist_ok=True)
-
-df[["score"]].to_excel("data/outputs/scores_reais.xlsx", index=False)
-df_gerados[["score"]].to_excel("data/outputs/scores_gerados.xlsx", index=False)
-
-print("\n[OK] Arquivos exportados:")
-print("   - data/outputs/scores_reais.xlsx")
-print("   - data/outputs/scores_gerados.xlsx")
+saida = RAIZ / "data" / "outputs"
+saida.mkdir(parents=True, exist_ok=True)
+pd.DataFrame([vars(r) for r in resultados]).to_excel(saida / "backtest_estrategias.xlsx", index=False)
+pd.DataFrame(vies).to_excel(saida / "teste_vies.xlsx", index=False)
+print(f"\n[OK] Exportado: {saida / 'backtest_estrategias.xlsx'}, {saida / 'teste_vies.xlsx'}")

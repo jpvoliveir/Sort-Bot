@@ -1,85 +1,28 @@
-distribuicao_pares entre os 6 numeros = {
-    0: 1,32%
-    1: 8,81%
-    2: 24,08%
-    3: 30,87%
-    4: 24,18%
-    5: 9,46%
-    6: 1,28%
-}
+# Power BI
 
-distribuicao_fibonacci entre os 6 numeros = {
-    0: 36,98%
-    1: 41,84%
-    2: 17,63%
-    3: 3,38%
-    4: 0,17%
-}
+## Fontes
 
-distribuicao_quadrantes entre os 6 numeros 
-1 quadrante → 0,07% 
-2 quadrantes → 6,32%
-3 quadrantes → 50,56%
-4 quadrantes → 43,06%
+| Arquivo | Gerado por | Conteúdo |
+|---|---|---|
+| `data/processed/analise_megasena.csv` | `tools/atualizar_dados.py` | Um sorteio por linha (UTF-8, separador vírgula) |
+| `data/outputs/backtest_estrategias.xlsx` | `backtest.py` | Resultado de cada estratégia de previsão |
+| `data/outputs/teste_vies.xlsx` | `backtest.py` | Qui-quadrado de frequência por período |
 
---- PESOS NORMALIZADOS (percentual / maior_percentual) ---
+Depois de atualizar os dados, use **Página Inicial → Atualizar** no Power BI.
 
-peso_pares = {
-    0: 0.0428,  # 1,32% / 30,87%
-    1: 0.2854,  # 8,81% / 30,87%
-    2: 0.7804,  # 24,08% / 30,87%
-    3: 1.0000,  # 30,87% / 30,87% (mais comum)
-    4: 0.7840,  # 24,18% / 30,87%
-    5: 0.3066,  # 9,46% / 30,87%
-    6: 0.0415   # 1,28% / 30,87%
-}
+## Colunas de análise do CSV
 
-peso_fibonacci = {
-    0: 0.8838,  # 36,98% / 41,84%
-    1: 1.0000,  # 41,84% / 41,84% (mais comum)
-    2: 0.4209,  # 17,63% / 41,84%
-    3: 0.0808,  # 3,38% / 41,84%
-    4: 0.0041   # 0,17% / 41,84%
-}
+Além das colunas do Excel da Caixa (`Concurso`, `Data do Sorteio`, `Bola1`…`Bola6`, rateios):
 
-peso_quadrantes = {
-    1: 0.0014,  # 0,07% / 50,56%
-    2: 0.1250,  # 6,32% / 50,56%
-    3: 1.0000,  # 50,56% / 50,56% (mais comum)
-    4: 0.8516   # 43,06% / 50,56%
-}
+| Coluna | Significado |
+|---|---|
+| `qtd_fibonacci` | Dezenas em {1, 2, 3, 5, 8, 13, 21, 34, 55} |
+| `pares` / `impares` | Contagem de pares e ímpares |
+| `quadrantes` | Quantos quadrantes (1–15, 16–30, 31–45, 46–60) têm dezenas |
+| `assinatura_faixas` | Dezenas por faixa de 10, ex.: `1-1-1-1-1-1` |
 
-peso_assinatura_faixas = {
-    # Pesos normalizados: percentual / 2,03% (maior percentual)
-    "1-1-1-1-1-1": 1.0000,  # 2,03% (mais comum)
-    "1-1-0-2-1-1": 0.6305,  # 1,28%
-    "0-1-1-2-1-1": 0.6010,  # 1,22%
-    "2-1-1-1-0-1": 0.5468,  # 1,11%
-    "2-0-1-1-1-1": 0.5320,  # 1,08%
-    "1-1-1-0-2-1": 0.5172,  # 1,05%
-    "0-1-2-1-1-1": 0.4975,  # 1,01%
-    "0-1-1-1-2-1": 0.4828,  # 0,98%
-    "1-0-1-1-1-2": 0.4828,  # 0,98%
-    "1-0-1-1-2-1": 0.4828,  # 0,98%
-    "1-1-0-1-1-2": 0.4828,  # 0,98%
-    "1-1-1-1-2-0": 0.4828,  # 0,98%
-    "1-1-2-1-0-1": 0.4828,  # 0,98%
-    "2-1-1-1-1-0": 0.4483,  # 0,91%
-    "1-1-1-0-1-2": 0.4335,  # 0,88%
-    "1-1-1-2-0-1": 0.4335,  # 0,88%
-    "1-2-1-1-1-0": 0.4335,  # 0,88%
-    "1-0-1-2-1-1": 0.4138,  # 0,84%
-    "1-1-0-1-2-1": 0.4138,  # 0,84%
-    "1-1-1-1-0-2": 0.4138,  # 0,84%
-    "1-1-1-2-1-0": 0.4138,  # 0,84%
-    "1-2-0-1-1-1": 0.4138,  # 0,84%
-    "1-2-1-0-1-1": 0.4138,  # 0,84%
-    "1-1-2-1-1-0": 0.3990,  # 0,81%
-    "2-1-0-1-1-1": 0.3990,  # 0,81%
-    "0-1-1-1-1-2": 0.3842,  # 0,78%
-    "1-0-2-1-1-1": 0.3842,  # 0,78%
-    "1-1-2-0-0-2": 0.3350,  # 0,68%
-    "1-2-1-1-0-1": 0.3350,  # 0,68%
-    "2-1-1-0-1-1": 0.3350,  # 0,68%
-    # ... (outras 353 assinaturas com pesos menores, variando de 0.3153 até 0.0148)
-}
+## Observação
+
+As distribuições dessas colunas (ex.: 3 pares em ~31% dos sorteios) são as mesmas que
+jogos totalmente aleatórios produzem. Elas descrevem o histórico, mas não indicam quais
+jogos têm mais chance: todas as combinações têm 1 chance em 50.063.860.
