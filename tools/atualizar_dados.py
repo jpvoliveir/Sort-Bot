@@ -12,6 +12,7 @@ import json
 import shutil
 import sys
 import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
@@ -25,13 +26,15 @@ URL_API = "https://servicebus2.caixa.gov.br/portaldeloterias/api/megasena/"
 ABA = "MEGA SENA"
 
 
-def buscar_concurso(numero=""):
-    """numero vazio = último concurso"""
+def buscar_concurso(numero):
+    """Retorna None se o concurso ainda não foi sorteado (a API responde com erro HTTP)"""
     req = urllib.request.Request(f"{URL_API}{numero}", headers={"User-Agent": "Mozilla/5.0"})
     for tentativa in range(3):
         try:
             with urllib.request.urlopen(req, timeout=30) as resp:
                 return json.load(resp)
+        except urllib.error.HTTPError:
+            return None
         except OSError:
             if tentativa == 2:
                 raise
@@ -73,17 +76,20 @@ def concurso_para_linha(d):
 def atualizar_pela_api():
     df = carregar_sorteios()
     ultimo_local = int(df["Concurso"].max())
-    ultimo_api = int(buscar_concurso()["numero"])
-    if ultimo_api <= ultimo_local:
+
+    # Não usa o endpoint de "último concurso": ele fica em cache e chega a atrasar
+    # quase 1h depois do sorteio. Busca número a número até a API dizer que não existe.
+    novas = []
+    numero = ultimo_local + 1
+    while (dados := buscar_concurso(numero)) is not None:
+        novas.append(concurso_para_linha(dados))
+        print(f"   {numero}: {novas[-1]['Data do Sorteio']}")
+        numero += 1
+        time.sleep(0.3)  # não sobrecarregar a API
+
+    if not novas:
         print(f"Já atualizado (concurso {ultimo_local}).")
         return
-
-    print(f"Baixando concursos {ultimo_local + 1} a {ultimo_api}...")
-    novas = []
-    for numero in range(ultimo_local + 1, ultimo_api + 1):
-        novas.append(concurso_para_linha(buscar_concurso(numero)))
-        print(f"   {numero}: {novas[-1]['Data do Sorteio']}")
-        time.sleep(0.3)  # não sobrecarregar a API
 
     df = pd.concat([df, pd.DataFrame(novas)[df.columns]], ignore_index=True)
     df.to_excel(CAMINHO_EXCEL, sheet_name=ABA, index=False)

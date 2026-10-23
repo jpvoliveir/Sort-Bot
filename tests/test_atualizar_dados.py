@@ -1,5 +1,6 @@
 import pandas as pd
 
+import tools.atualizar_dados as atualizar
 from analysis.dados import CAMINHO_EXCEL
 from tools.atualizar_dados import concurso_para_linha, formatar_reais
 
@@ -45,3 +46,23 @@ def test_cidades_dos_ganhadores():
         {"municipio": "PONTA PORA", "uf": "MS"},
     ])
     assert concurso_para_linha(d)["Cidade / UF"] == "CANAL ELETRONICO; PONTA PORA/MS"
+
+
+def test_busca_concursos_ate_a_api_dizer_que_nao_existe(monkeypatch, tmp_path):
+    excel = pd.read_excel(CAMINHO_EXCEL).head(3)  # concursos 1 a 3
+    destino = tmp_path / "Mega-Sena.xlsx"
+    pedidos = []
+
+    def api_falsa(numero):
+        pedidos.append(numero)
+        return dict(API_2961, numero=numero) if numero <= 5 else None
+
+    monkeypatch.setattr(atualizar, "carregar_sorteios", lambda: excel)
+    monkeypatch.setattr(atualizar, "CAMINHO_EXCEL", destino)
+    monkeypatch.setattr(atualizar, "buscar_concurso", api_falsa)
+    monkeypatch.setattr(atualizar.time, "sleep", lambda s: None)
+
+    atualizar.atualizar_pela_api()
+
+    assert pedidos == [4, 5, 6]
+    assert pd.read_excel(destino)["Concurso"].tolist() == [1, 2, 3, 4, 5]
