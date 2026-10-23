@@ -15,12 +15,23 @@ py -3.12 -m venv .venv
 
 ## Uso
 
+**Com janela:** dois cliques em `Robo Mega-Sena.bat`. Escolha a estratégia e a quantidade,
+clique em **Gerar jogos** e, depois do sorteio, em **Conferir resultados**.
+
+**Pelo terminal:**
+
 ```bash
-python tools/atualizar_dados.py   # baixa os concursos novos da API da Caixa e regenera o CSV
-python backtest.py                # laboratório: backtest das estratégias + teste de viés físico
-python main.py                    # gera os jogos (quantidade em QTD_JOGOS)
-python -m pytest                  # testes
+python main.py                        # gera os jogos do próximo concurso (atualiza os dados antes)
+python main.py --estrategia quentes --qtd 5
+python conferir.py                    # confere os jogos registrados e mostra o balanço
+python backtest.py                    # laboratório: backtest das estratégias + teste de viés físico
+python tools/atualizar_dados.py       # só atualiza os dados (API da Caixa)
+python -m pytest                      # testes
 ```
+
+Todo jogo gerado é salvo em `data/apostas/registro_apostas.csv` com o concurso a que se
+destina; a conferência preenche acertos e prêmio. Se gerar jogos que não for jogar, apague
+essas linhas para o balanço refletir só o que você apostou.
 
 Sem internet, baixe o Excel em https://loterias.caixa.gov.br/Paginas/Mega-Sena.aspx e rode
 `python tools/atualizar_dados.py --excel "caminho/do/arquivo.xlsx"`.
@@ -43,6 +54,7 @@ histórico e devolve as 60 dezenas ordenadas, e registre-a em `ESTRATEGIAS`.
 |---|---|
 | `data/raw/Mega-Sena.xlsx` | Histórico oficial (formato do Excel da Caixa) |
 | `data/processed/analise_megasena.csv` | Histórico + colunas de análise (fonte do Power BI) |
+| `data/apostas/registro_apostas.csv` | Jogos gerados por concurso, com acertos e prêmio |
 | `data/outputs/` | Jogos gerados e resultados do laboratório (não versionado) |
 | `analysis/` | Padrões, carregamento de dados, estratégias, backtest, teste de viés |
 | `generator/` | Gerador de jogos e filtro de popularidade |

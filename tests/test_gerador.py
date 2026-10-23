@@ -38,3 +38,10 @@ def test_gerar_jogos_respeita_ranking():
     ranking = list(range(60, 0, -1))
     jogos = gerar_jogos(10, ranking=ranking, rng=random.Random(0))
     assert all(set(j) <= set(ranking[:TOP_RANKING]) for j in jogos)
+
+
+def test_primeiro_jogo_e_o_top6_do_ranking():
+    ranking = [6, 17, 27, 30, 43, 58] + [n for n in range(1, 61) if n not in (6, 17, 27, 30, 43, 58)]
+    jogos = gerar_jogos(3, ranking=ranking, rng=random.Random(0))
+    assert jogos[0] == [6, 17, 27, 30, 43, 58]
+    assert len(jogos) == 3 and len({tuple(j) for j in jogos}) == 3

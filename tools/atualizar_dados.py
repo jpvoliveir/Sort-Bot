@@ -89,11 +89,21 @@ def atualizar_pela_api():
 
     if not novas:
         print(f"Já atualizado (concurso {ultimo_local}).")
-        return
+        return 0
 
     df = pd.concat([df, pd.DataFrame(novas)[df.columns]], ignore_index=True)
     df.to_excel(CAMINHO_EXCEL, sheet_name=ABA, index=False)
     print(f"   -> {CAMINHO_EXCEL}")
+    return len(novas)
+
+
+def atualizar_se_possivel():
+    """Usado por main.py e conferir.py: sem internet, segue com os dados locais"""
+    try:
+        if atualizar_pela_api():
+            gerar_csv_analise()
+    except OSError as e:
+        print(f"[AVISO] Sem acesso à API da Caixa ({e}). Usando os dados locais.")
 
 
 def main():
